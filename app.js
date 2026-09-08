@@ -22,7 +22,7 @@ const moeda = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", curr
 
 // Chamada única ao "portão" (o token do login vai junto automaticamente)
 async function api(payload) {
-  const { data, error } = await db.functions.invoke("api", { body: payload });
+  const { data, error } = await db.functions.invoke("rapid-responder", { body: payload });
   if (error) {
     let msg = error.message;
     try { msg = (await error.context.json()).error || msg; } catch {}
