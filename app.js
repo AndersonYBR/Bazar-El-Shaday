@@ -1,18 +1,29 @@
 // =====================================================
-// BAZAR EL SHADAY — app.js (tudo via Edge Function "api")
-// O app NÃO fala direto com o banco: cada chamada passa
+// BAZAR EL SHADAY — app.js (admin da loja)
+// O app NÃO fala direto com o banco: cada escrita passa
 // pelo "portão" (Edge Function), que faz rate limit por
 // usuário, valida comando/campos e guarda a chave forte.
 //
-// 1. Crie o projeto no Supabase e rode o schema.sql
-// 2. Crie a Edge Function "api" (passo a passo no LEIA-ME.txt)
-// 3. Cole a URL e a chave ANON abaixo (Project Settings > API)
+// Configuração (já preenchida para o projeto do bazar):
+//   - SUPABASE_URL            (Project Settings > API)
+//   - SUPABASE_PUBLISHABLE_KEY (a chave PÚBLICA — nunca a secret)
+//   - NOME_FUNCAO             (nome da Edge Function no Supabase)
+//
+// O CATÁLOGO público (catalogo.html) lê a MESMA tabela
+// "produtos" — é assim que as duas páginas se conectam.
 // =====================================================
 
+// Projeto usa o NOVO sistema de chaves do Supabase.
+// No NAVEGADOR use a PUBLISHABLE KEY (sb_publishable_...) — é pública por
+// design, segura no cliente. NUNCA coloque a secret key (sb_secret_...) aqui.
 const SUPABASE_URL = "https://mwggbbfidojucvmlywxd.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9";
 
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Nome da Edge Function no Supabase (tem que bater com o nome que você criou
+// em Edge Functions > ver nome). Pelo seu console, é "rapid-responder".
+const NOME_FUNCAO = "rapid-responder";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // ---------- utilidades ----------
 const $ = (sel) => document.querySelector(sel);
@@ -22,7 +33,7 @@ const moeda = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", curr
 
 // Chamada única ao "portão" (o token do login vai junto automaticamente)
 async function api(payload) {
-  const { data, error } = await db.functions.invoke("rapid-responder", { body: payload });
+  const { data, error } = await db.functions.invoke(NOME_FUNCAO, { body: payload });
   if (error) {
     let msg = error.message;
     try { msg = (await error.context.json()).error || msg; } catch {}
@@ -44,50 +55,21 @@ document.querySelectorAll(".aba").forEach((btn) =>
 // ---------- LOGIN / LOGOUT ----------
 $("#form-login").addEventListener("submit", async (e) => {
   e.preventDefault();
-
-  const email = $("#login-email").value.trim();
-  const senha = $("#login-senha").value;
-  const mensagem = $("#msg-login");
-  const botao = e.target.querySelector("button[type='submit']");
-
-  mensagem.textContent = "Entrando...";
-  mensagem.className = "msg";
-  botao.disabled = true;
-
-  try {
-    const { data, error } = await db.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
-
-    if (error) {
-      console.error("Erro no login:", error);
-      mensagem.textContent = "Erro: " + error.message;
-      mensagem.className = "msg erro";
-      return;
-    }
-
-    console.log("Login realizado:", data.user.email);
-    mensagem.textContent = "Login realizado!";
-    mensagem.className = "msg ok";
-
-    $("#tela-login").classList.add("oculta");
-    $("#tela-app").classList.remove("oculta");
-
-    carregarTudo();
-  } catch (erro) {
-    console.error("Erro inesperado:", erro);
-    mensagem.textContent = "Não foi possível conectar ao Supabase.";
-    mensagem.className = "msg erro";
-  } finally {
-    botao.disabled = false;
-  }
+  const { error } = await db.auth.signInWithPassword({
+    email: $("#login-email").value.trim(),
+    password: $("#login-senha").value,
+  });
+  $("#msg-login").textContent = error ? "Erro: " + error.message : "";
+  $("#msg-login").className = "msg " + (error ? "erro" : "ok");
 });
 
-$("#btn-sair").addEventListener("click", async () => {
-  await db.auth.signOut();
-});
+$("#btn-sair").addEventListener("click", () => db.auth.signOut());
 
+db.auth.onAuthStateChange((_ev, session) => {
+  $("#tela-login").classList.toggle("oculta", !!session);
+  $("#tela-app").classList.toggle("oculta", !session);
+  if (session) carregarTudo();
+});
 
 // ---------- ESTOQUE ----------
 let produtos = [];
