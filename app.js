@@ -19,8 +19,10 @@
 const SUPABASE_URL = "https://mwggbbfidojucvmlywxd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9";
 
-// Nome da Edge Function no Supabase (tem que bater com o nome que você criou
-// em Edge Functions > ver nome). Pelo seu console, é "rapid-responder".
+// Nome da Edge Function: use o nome que está na URL (coluna URL do dashboard),
+// que é o endpoint REAL — no momento é "rapid-responder" (a função foi
+// renomeada para "api", mas a URL continua com o nome antigo).
+// Dúvida? Rode o teste do fetch no Console do navegador (veja a conversa).
 const NOME_FUNCAO = "rapid-responder";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
