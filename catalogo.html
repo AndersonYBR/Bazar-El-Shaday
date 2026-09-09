@@ -4,20 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Catálogo — Bazar El Shaday</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="catalogo.css" />
 </head>
 <body>
-  <header class="topo-catalogo">
+
+  <header class="topo">
     <h1>🛍️ Bazar El Shaday</h1>
-    <p>Confira nossos produtos</p>
+    <p class="sub">Nova Pampulha · Vespasiano/MG</p>
+    <a href="/" class="voltar">← Área da loja</a>
   </header>
 
-  <main class="catalogo">
+  <main>
+    <!-- O catalogo.js procura EXATAMENTE estes dois elementos -->
     <p id="msg-catalogo" class="msg"></p>
-    <section id="lista-catalogo" class="grade-produtos"></section>
+    <div id="lista-catalogo" class="grade"></div>
   </main>
 
+  <footer>
+    <p>📍 Nova Pampulha, Vespasiano/MG</p>
+    <p>Fale conosco pelo WhatsApp de qualquer produto 😉</p>
+  </footer>
+
+  <!-- Biblioteca do Supabase (CDN) — obrigatório carregar ANTES do catalogo.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./catalogo.js"></script>
+  <script src="catalogo.js"></script>
 </body>
 </html>
