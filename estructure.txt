@@ -1,0 +1,5 @@
+index.html       → painel administrativo
+app.js           → login, estoque, vendas e clientes
+catalogo.html    → catálogo público
+catalogo.js      → carrega os produtos publicados
+styles.css       → estilos
