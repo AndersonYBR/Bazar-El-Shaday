@@ -44,21 +44,50 @@ document.querySelectorAll(".aba").forEach((btn) =>
 // ---------- LOGIN / LOGOUT ----------
 $("#form-login").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const { error } = await db.auth.signInWithPassword({
-    email: $("#login-email").value.trim(),
-    password: $("#login-senha").value,
-  });
-  $("#msg-login").textContent = error ? "Erro: " + error.message : "";
-  $("#msg-login").className = "msg " + (error ? "erro" : "ok");
+
+  const email = $("#login-email").value.trim();
+  const senha = $("#login-senha").value;
+  const mensagem = $("#msg-login");
+  const botao = e.target.querySelector("button[type='submit']");
+
+  mensagem.textContent = "Entrando...";
+  mensagem.className = "msg";
+  botao.disabled = true;
+
+  try {
+    const { data, error } = await db.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) {
+      console.error("Erro no login:", error);
+      mensagem.textContent = "Erro: " + error.message;
+      mensagem.className = "msg erro";
+      return;
+    }
+
+    console.log("Login realizado:", data.user.email);
+    mensagem.textContent = "Login realizado!";
+    mensagem.className = "msg ok";
+
+    $("#tela-login").classList.add("oculta");
+    $("#tela-app").classList.remove("oculta");
+
+    carregarTudo();
+  } catch (erro) {
+    console.error("Erro inesperado:", erro);
+    mensagem.textContent = "Não foi possível conectar ao Supabase.";
+    mensagem.className = "msg erro";
+  } finally {
+    botao.disabled = false;
+  }
 });
 
-$("#btn-sair").addEventListener("click", () => db.auth.signOut());
-
-db.auth.onAuthStateChange((_ev, session) => {
-  $("#tela-login").classList.toggle("oculta", !!session);
-  $("#tela-app").classList.toggle("oculta", !session);
-  if (session) carregarTudo();
+$("#btn-sair").addEventListener("click", async () => {
+  await db.auth.signOut();
 });
+
 
 // ---------- ESTOQUE ----------
 let produtos = [];
