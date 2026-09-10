@@ -1,13 +1,14 @@
 // =====================================================
 // BAZAR EL SHADAY — app.js (admin da loja)
-// O app NÃO fala direto com o banco: cada escrita passa
-// pelo "portão" (Edge Function), que faz rate limit por
-// usuário, valida comando/campos e guarda a chave forte.
+// SEGURANÇA: RLS no banco (Supabase) — só usuário LOGADO
+// lê/escreve os dados; o catálogo público (anon) só lê
+// produtos. Sem chave secreta no navegador, sem dependência
+// de Edge Function (que ficou com o caminho público travado
+// na plataforma — ver LEIA-ME, seção PLANO B).
 //
 // Configuração (já preenchida para o projeto do bazar):
 //   - SUPABASE_URL            (Project Settings > API)
 //   - SUPABASE_PUBLISHABLE_KEY (a chave PÚBLICA — nunca a secret)
-//   - NOME_FUNCAO             (nome da Edge Function no Supabase)
 //
 // O CATÁLOGO público (catalogo.html) lê a MESMA tabela
 // "produtos" — é assim que as duas páginas se conectam.
@@ -19,11 +20,6 @@
 const SUPABASE_URL = "https://mwggbbfidojucvmlywxd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9";
 
-// Nome da Edge Function (slug). A antiga "rapid-responder" ficou com o
-// caminho público travado na plataforma após várias versões quebradas —
-// foi criada a função nova "bazar-api" (mesmo código, nome limpo).
-const NOME_FUNCAO = "bazar-api";
-
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // ---------- utilidades ----------
@@ -32,15 +28,58 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const moeda = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// Chamada única ao "portão" (o token do login vai junto automaticamente)
+// Chamada única à base de dados.
+// PLANO B (sem Edge Function): o app fala DIRETO com o banco via
+// PostgREST, usando o token do login + RLS (só logado lê/escreve —
+// a segurança fica no banco, que é o modelo oficial do Supabase).
+function amigavel(error) {
+  if (error.code === "42501")
+    return "sem permissão (precisa estar logada — entre de novo)";
+  return error.message;
+}
+
 async function api(payload) {
-  const { data, error } = await db.functions.invoke(NOME_FUNCAO, { body: payload });
-  if (error) {
-    let msg = error.message;
-    try { msg = (await error.context.json()).error || msg; } catch {}
-    throw new Error(msg);
+  const { cmd, tabela, id, dados, produtoId, qtd } = payload;
+
+  if (cmd === "list") {
+    const q = tabela === "vendas"
+      ? db.from("vendas").select("*, produtos(nome)")
+          .order("created_at", { ascending: false }).limit(30)
+      : db.from(tabela).select("*").order("nome");
+    const { data, error } = await q;
+    if (error) throw new Error(amigavel(error));
+    return data;
   }
-  return data;
+
+  if (cmd === "add") {
+    const { error } = await db.from(tabela).insert(dados);
+    if (error) throw new Error(amigavel(error));
+    return { ok: true };
+  }
+
+  if (cmd === "del") {
+    const { error } = await db.from(tabela).delete().eq("id", id);
+    if (error) throw new Error(amigavel(error));
+    return { ok: true };
+  }
+
+  if (cmd === "venda") {
+    const { data: p, error: e0 } = await db.from("produtos")
+      .select("id, nome, quantidade, preco").eq("id", produtoId).single();
+    if (e0 || !p) throw new Error("produto não encontrado");
+    if (p.quantidade < qtd)
+      throw new Error("estoque insuficiente (tem " + p.quantidade + ")");
+    const total = Math.round((p.preco || 0) * qtd * 100) / 100;
+    const { error: e1 } = await db.from("vendas")
+      .insert({ produto_id: p.id, quantidade: qtd, total });
+    if (e1) throw new Error(amigavel(e1));
+    const { error: e2 } = await db.from("produtos")
+      .update({ quantidade: p.quantidade - qtd }).eq("id", p.id);
+    if (e2) throw new Error(amigavel(e2));
+    return { ok: true, produto: p.nome, qtd, total };
+  }
+
+  throw new Error("comando inválido");
 }
 
 // ---------- abas ----------
