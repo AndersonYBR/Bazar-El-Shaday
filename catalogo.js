@@ -73,6 +73,7 @@ async function carregarCatalogo() {
       <p class="disponibilidade">
         ${produto.quantidade} unidade(s) disponível(is)
       </p>
+      <p class="contato">📱 (31) 97189-2234 · Nova Pampulha, Vespasiano/MG</p>
       <a
         class="btn"
         target="_blank"
