@@ -18,7 +18,20 @@ body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--f
 main{max-width:900px;margin:0 auto;padding:16px}
 .msg{color:var(--muted);font-size:14px;min-height:20px;margin:0 0 12px}
 
+.btn-atualizar{
+  float:right;background:var(--primaria-claro);color:var(--primaria);border:1px solid var(--borda);
+  border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer;
+}
+.btn-atualizar:hover{background:var(--primaria);color:#fff}
+
 .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.imagem-produto img{
+  width:100%;height:170px;object-fit:cover;border-radius:10px;display:block;
+}
+.tamanhos{
+  font-size:13px;font-weight:700;color:var(--muted);margin:0;
+  background:var(--primaria-claro);border-radius:8px;padding:4px 8px;text-align:center;
+}
 
 .card-produto{
   background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
