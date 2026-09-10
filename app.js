@@ -19,9 +19,11 @@
 const SUPABASE_URL = "https://mwggbbfidojucvmlywxd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9";
 
-// Nome da Edge Function: CONFIRMADO pelo teste (rapid-responder dava 404).
-// O caminho válido é o nome atual mostrado no dashboard: "api".
-const NOME_FUNCAO = "api";
+// Nome da Edge Function = o SLUG dela (o que aparece na Function URL):
+// https://mwggbbfidojucvmlywxd.supabase.co/functions/v1/rapid-responder
+// ATENÇÃO: o rótulo "api" que aparece no dashboard é só nome de EXIBIÇÃO —
+// a URL usa o slug, que não muda quando você renomeia a função.
+const NOME_FUNCAO = "rapid-responder";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
