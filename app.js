@@ -122,9 +122,14 @@ async function carregarEstoque() {
   ul.innerHTML = produtos.length
     ? produtos.map((p) => `
       <li class="item">
+        ${p.foto_url
+          ? `<img class="thumb" src="${esc(p.foto_url)}" alt="" />`
+          : ""}
         <div class="info">
           <span class="nome">${esc(p.nome)}</span>
-          <span class="det">${p.quantidade} un. · ${moeda(p.preco)}</span>
+          <span class="det">${p.quantidade} un. · ${moeda(p.preco)}${
+            p.tamanhos ? " · " + esc(p.tamanhos) : ""
+          }</span>
         </div>
         <button class="btn btn-mini" data-del-p="${p.id}">Remover</button>
       </li>`).join("")
@@ -145,18 +150,36 @@ async function carregarEstoque() {
 
 $("#form-produto").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const btn = e.target.querySelector("button[type=submit]");
   try {
-    await api({
-      cmd: "add", tabela: "produtos",
-      dados: {
-        nome: $("#p-nome").value.trim(),
-        quantidade: +$("#p-qtd").value,
-        preco: +$("#p-preco").value,
-      },
-    });
+    const dados = {
+      nome: $("#p-nome").value.trim(),
+      quantidade: +$("#p-qtd").value,
+      preco: +$("#p-preco").value,
+    };
+    const tam = $("#p-tam").value.trim();
+    if (tam) dados.tamanhos = tam;
+
+    // Foto opcional: sobe pro Storage (bucket "fotos") antes de gravar
+    const file = $("#p-foto").files[0] || null;
+    if (file) {
+      if (file.size > 2 * 1024 * 1024)
+        throw new Error("foto muito grande (máx. 2 MB)");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const caminho = "bazar/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) +
+        "." + (/[a-z0-9]{2,4}$/.test(ext) ? ext : "jpg");
+      btn.textContent = "Enviando foto…";
+      const { error: eFoto } = await db.storage.from("fotos").upload(caminho, file);
+      if (eFoto) throw new Error("falha ao enviar a foto: " + eFoto.message);
+      dados.foto_url = db.storage.from("fotos").getPublicUrl(caminho).data.publicUrl;
+    }
+
+    btn.textContent = "Salvando…";
+    await api({ cmd: "add", tabela: "produtos", dados });
     e.target.reset();
     carregarEstoque();
   } catch (err) { alert("Erro: " + err.message); }
+  finally { btn.textContent = "Adicionar"; }
 });
 
 // ---------- VENDAS ----------
