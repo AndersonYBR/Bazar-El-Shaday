@@ -47,7 +47,8 @@ header h1{
   font-family:"Playfair Display",Georgia,serif;font-size:18px;margin:0;
   color:var(--primaria-hover);display:flex;align-items:center;gap:9px;
 }
-.logo-admin{width:38px;height:38px;object-fit:cover;border-radius:10px}
+.logo-admin{width:96px;height:96px;object-fit:cover;border-radius:20px;flex:none}
+@media (min-width:721px){.logo-admin{width:168px;height:168px;border-radius:28px}}
 .acoes-topo{display:flex;align-items:center;gap:8px}
 .link-catalogo{
   color:var(--primaria);font-weight:700;text-decoration:none;font-size:13.5px;
