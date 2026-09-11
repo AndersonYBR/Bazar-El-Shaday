@@ -54,3 +54,4 @@ main{max-width:900px;margin:0 auto;padding:16px}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px 0;font-size:15px}
 
 footer{text-align:center;color:var(--muted);font-size:13px;padding:24px 16px 40px}
+ 
