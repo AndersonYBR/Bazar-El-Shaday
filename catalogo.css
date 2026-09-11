@@ -281,3 +281,41 @@ body{
   .nav-links{gap:18px}
   .nav-links a{font-size:12px;letter-spacing:.09em}
 }
+
+/* =====================================================
+   PÁGINA DO PRODUTO (produto.html)
+   ===================================================== */
+.produto-pagina{max-width:980px;margin:0 auto;padding:10px 16px 46px;position:relative;z-index:1}
+.voltar-link{
+  display:inline-block;margin:6px 0 18px;color:var(--primaria);
+  font-weight:700;text-decoration:none;font-size:14px;
+}
+.voltar-link:hover{color:var(--primaria-escura)}
+.produto-grid{display:grid;grid-template-columns:1fr;gap:24px}
+@media (min-width:820px){
+  .produto-grid{grid-template-columns:1.05fr 1fr;align-items:start}
+}
+.produto-fotos .carousel{
+  height:auto;aspect-ratio:1/1;max-height:560px;border-radius:18px;margin:0;
+  box-shadow:0 10px 26px rgba(20,83,125,.14);
+}
+.produto-fotos .imagem-grande{height:380px;font-size:90px;border-radius:18px}
+.produto-info h1{
+  font-family:"Playfair Display",Georgia,serif;font-size:30px;line-height:1.25;
+  margin:8px 0 4px;color:var(--primaria-escura);
+}
+.preco-grande{font-size:30px;font-weight:800;color:var(--primaria);margin:6px 0}
+.produto-info .disponibilidade{margin-bottom:12px}
+.detalhe{font-size:14.5px;color:var(--texto);margin:4px 0}
+.descricao-box{
+  background:#fff;border:1px solid var(--borda);border-radius:14px;
+  padding:14px 16px;margin:14px 0;box-shadow:0 2px 8px rgba(20,83,125,.05);
+}
+.descricao-box h3{
+  margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+}
+.descricao-box p{white-space:pre-line;font-size:14.5px;line-height:1.65;margin:0}
+.btn-grande{font-size:16px;padding:15px;display:block;text-align:center;margin-top:6px}
+/* card clicável no catálogo */
+.card-produto{cursor:pointer}
