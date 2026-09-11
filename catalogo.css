@@ -269,8 +269,15 @@ body{
 }
 .cor-produto{font-size:12.5px;color:var(--muted);margin:0}
 
-/* navbar com 6 links: um pouco mais compacto no desktop */
+/* navbar compacta no desktop (7 itens sem estourar) */
 @media (min-width:721px){
-  .nav-links{gap:16px}
-  .nav-links a{font-size:11.5px}
+  .navbar{padding:10px 16px}
+  .nav-links{gap:13px}
+  .nav-links a{font-size:11px;letter-spacing:.06em}
+  .logo{width:42px;height:42px}
+}
+@media (min-width:1100px){
+  .nav-links{gap:18px}
+  .nav-links a{font-size:12px;letter-spacing:.09em}
+  .logo{width:46px;height:46px}
 }
