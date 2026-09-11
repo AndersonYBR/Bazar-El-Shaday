@@ -127,7 +127,7 @@ function card(produto) {
         ${fotos.map((f, i) =>
           `<img class="slide ${i === 0 ? "ativa" : ""}" src="${escapar(f)}"
             alt="${escapar(produto.nome)}" ${i > 0 ? 'loading="lazy"' : ""}
-            onerror="this.remove()" />`).join("")}
+            onerror="${fotos.length === 1 ? "this.outerHTML='🛍️'" : "this.remove()"}" />`).join("")}
         ${fotos.length > 1
           ? `<div class="dots">${fotos.map((_, i) =>
               `<span class="dot ${i === 0 ? "ativa" : ""}" data-dot="${i}"></span>`).join("")}</div>`
