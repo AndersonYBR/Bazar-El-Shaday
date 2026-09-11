@@ -15,6 +15,26 @@
     <a href="index.html" class="voltar">← Área da loja</a>
   </header>
 
+  <!-- ============ CARROSSEL DE BANNERS ============ -->
+  <section id="banner-wrap" class="banner-wrap" aria-label="Promoções">
+    <div class="banner-slides">
+      <img class="banner-slide ativa" src="banner1.jpg" alt="Cantinho Pet — ração e petiscos" />
+      <img class="banner-slide" src="banner2.jpg" alt="Utilidades para o lar — ver ofertas" loading="lazy" />
+      <img class="banner-slide" src="banner3.jpg" alt="Coleção de verão — confira já" loading="lazy" />
+      <img class="banner-slide" src="banner4.jpg" alt="Feliz Dia das Crianças — confira agora" loading="lazy" />
+      <img class="banner-slide" src="banner5.jpg" alt="Grande promoção — até 60% de desconto" loading="lazy" />
+    </div>
+    <button type="button" id="banner-ant" class="banner-flecha" aria-label="Banner anterior">‹</button>
+    <button type="button" id="banner-prox" class="banner-flecha" aria-label="Próximo banner">›</button>
+    <div class="banner-dots">
+      <span class="banner-dot ativa" data-b="0"></span>
+      <span class="banner-dot" data-b="1"></span>
+      <span class="banner-dot" data-b="2"></span>
+      <span class="banner-dot" data-b="3"></span>
+      <span class="banner-dot" data-b="4"></span>
+    </div>
+  </section>
+
   <main>
     <!-- O catalogo.js procura EXATAMENTE estes dois elementos -->
     <p id="msg-catalogo" class="msg"></p>
@@ -42,5 +62,5 @@
   <!-- Biblioteca do Supabase (CDN) — obrigatório carregar ANTES do catalogo.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="catalogo.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39856867e35f247',t:'MTc4OTE0NzE3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39926e4c86f1cf7',t:'MTc4OTE1NTcwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
