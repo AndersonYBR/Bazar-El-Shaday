@@ -3,20 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catálogo — Bazar El Shaday</title>
+  <title>Bazar da Val — Catálogo</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="catalogo.css" />
 </head>
-<body>
+<body id="topo">
 
-  <header class="topo">
-    <h1>🛍️ Bazar El Shaday</h1>
-    <p class="sub">Nova Pampulha · Vespasiano/MG</p>
-    <a href="index.html" class="voltar">← Área da loja</a>
-  </header>
+  <!-- ============ NAVBAR (transparente + shadow) ============ -->
+  <nav class="navbar">
+    <a href="#topo" class="marca" aria-label="Bazar da Val — início">
+      <img src="logodaval.jpg" alt="Bazar da Val" class="logo" />
+    </a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Abrir menu">☰</button>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#topo" class="ativa" data-filtro="inicio">Início</a></li>
+      <li><a href="#produtos" data-filtro="masculino">Moda Masculina</a></li>
+      <li><a href="#produtos" data-filtro="feminino">Moda Feminina</a></li>
+      <li><a href="#produtos" data-filtro="infantil">Infantil</a></li>
+      <li><a href="#produtos" data-filtro="pets">Pets</a></li>
+      <li><a href="#produtos" data-filtro="utilidades">Utilidades p/ Casa</a></li>
+      <li class="nav-admin"><a href="index.html">Área da loja</a></li>
+    </ul>
+  </nav>
 
-  <!-- ============ CARROSSEL DE BANNERS ============ -->
-  <section id="banner-wrap" class="banner-wrap" aria-label="Promoções">
+  <!-- ============ Decoração ilustrada (fundo) ============ -->
+  <svg class="deco deco-direita" viewBox="0 0 200 260" aria-hidden="true">
+    <g fill="none" stroke="#1b7fbf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <!-- cabide com vestido -->
+      <path d="M100 18 c0-10 14-10 14 0 c0 7-9 8-9 14 l55 40 H50 z" />
+      <path d="M75 72 h50 l14 90 c2 14-10 24-24 24 s-26-10-24-24 z" />
+      <path d="M88 96 h24" />
+      <!-- varal -->
+      <path d="M10 200 h120" stroke-dasharray="2 10" />
+      <circle cx="180" cy="120" r="3" />
+      <circle cx="20" cy="150" r="3" />
+      <path d="M168 220 l4 9 9 4 -9 4 -4 9 -4-9 -9-4 9-4 z" />
+    </g>
+  </svg>
+  <svg class="deco deco-esquerda" viewBox="0 0 200 260" aria-hidden="true">
+    <g fill="none" stroke="#1b7fbf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <!-- coração -->
+      <path d="M100 60 c-12-18-40-2-24 20 l24 30 24-30 c16-22-12-38-24-20 z" />
+      <!-- linha de costura -->
+      <path d="M20 140 c30 16 130 16 160 0" stroke-dasharray="3 10" />
+      <!-- tesoura (simplificada) -->
+      <circle cx="70" cy="200" r="10" />
+      <circle cx="100" cy="212" r="10" />
+      <path d="M78 192 L150 140 M92 204 L150 156" />
+      <!-- brilho -->
+      <path d="M150 40 l4 10 10 4 -10 4 -4 10 -4-10 -10-4 10-4 z" />
+    </g>
+  </svg>
+
+  <!-- ============ BANNERS ============ -->
+  <section class="banner-wrap" aria-label="Promoções">
     <div class="banner-slides">
       <img class="banner-slide ativa" src="banner1bazardaval.jpg" alt="Cantinho Pet — ração e petiscos" />
       <img class="banner-slide" src="banner2bazardaval.jpg" alt="Utilidades para o lar — ver ofertas" loading="lazy" />
@@ -35,32 +78,74 @@
     </div>
   </section>
 
-  <main>
-    <!-- O catalogo.js procura EXATAMENTE estes dois elementos -->
-    <p id="msg-catalogo" class="msg"></p>
-    <button id="btn-atualizar" class="btn-atualizar" type="button">↻ Atualizar</button>
+  <!-- ============ PRODUTOS ============ -->
+  <main class="conteudo">
+    <section id="produtos" class="secao">
+      <h2 class="titulo-secao">Nossos Produtos</h2>
+      <p class="sub-secao">Escolha a categoria e encontre o que procura ✨</p>
 
-    <div class="toolbar">
-      <label for="ordenar-catalogo">Ordenar:</label>
-      <select id="ordenar-catalogo">
-        <option value="recentes">Mais recentes</option>
-        <option value="preco-asc">Menor preço</option>
-        <option value="preco-desc">Maior preço</option>
-        <option value="nome">Nome (A–Z)</option>
-      </select>
-    </div>
-    <div id="chips-categoria" class="chips-categoria"></div>
+      <div class="barra-ferramentas">
+        <p id="msg-catalogo" class="msg"></p>
+        <div class="toolbar-direita">
+          <label for="ordenar-catalogo">Ordenar:</label>
+          <select id="ordenar-catalogo">
+            <option value="recentes">Mais recentes</option>
+            <option value="preco-asc">Menor preço</option>
+            <option value="preco-desc">Maior preço</option>
+            <option value="nome">Nome (A–Z)</option>
+          </select>
+          <label for="sel-genero">Gênero:</label>
+          <select id="sel-genero">
+            <option value="">Todos</option>
+            <option>Masculino</option>
+            <option>Feminino</option>
+            <option>Infantil</option>
+            <option>Unissex</option>
+          </select>
+          <button id="btn-atualizar" class="btn-atualizar" type="button">↻ Atualizar</button>
+        </div>
+      </div>
 
-    <div id="lista-catalogo" class="grade"></div>
+      <div id="categorias">
+        <div id="chips-categoria" class="chips-categoria"></div>
+      </div>
+
+      <div id="lista-catalogo" class="grade"></div>
+    </section>
   </main>
 
-  <footer>
-    <p>📍 Nova Pampulha, Vespasiano/MG</p>
-    <p>Fale conosco pelo WhatsApp de qualquer produto 😉</p>
+  <!-- ============ CONTATO / RODAPÉ ============ -->
+  <footer id="contato" class="rodape">
+    <div class="rodape-inner">
+      <div class="col">
+        <img src="logodaval.jpg" alt="Bazar da Val" class="logo-rodape" />
+        <p class="slogan">Moda, utilidades e carinho<br>para a sua família.</p>
+      </div>
+      <div class="col">
+        <h4>Contato</h4>
+        <p>📱 (31) 8886-6910</p>
+        <a class="btn-whats" href="https://wa.me/553188866910" target="_blank" rel="noopener">Fale conosco no WhatsApp</a>
+      </div>
+      <div class="col">
+        <h4>Visite-nos</h4>
+        <p>📍 Nova Pampulha · Vespasiano/MG</p>
+        <a class="btn-whats" href="https://www.google.com/maps/search/?api=1&query=Bazar%20da%20Val%20Nova%20Pampulha%20Vespasiano%20MG"
+           target="_blank" rel="noopener" style="background:#fff;color:var(--primaria-escura)">🗺️ Como chegar (Google Maps)</a>
+        <p style="margin-top:10px">Horários: chame no WhatsApp 😉</p>
+      </div>
+    </div>
+    <p class="rodape-base">© 2026 Bazar da Val · Todos os direitos reservados</p>
   </footer>
+
+  <!-- ============ WHATSAPP FLUTUANTE ============ -->
+  <a class="whats-flutuante" href="https://wa.me/553188866910" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    <svg viewBox="0 0 32 32" width="30" height="30" fill="currentColor" aria-hidden="true">
+      <path d="M16 3C9.4 3 4 8.4 4 15c0 2.1.6 4.2 1.6 6L4 29l8.2-1.5c1.7.9 3.7 1.4 5.8 1.4 6.6 0 12-5.4 12-12S22.6 3 16 3zm0 21.8c-1.8 0-3.6-.5-5.1-1.4l-.4-.2-4.9.9.9-4.7-.2-.4c-1-1.6-1.6-3.4-1.6-5.3 0-5.4 4.4-9.8 9.9-9.8 5.4 0 9.8 4.4 9.8 9.8s-4.5 11.1-8.4 11.1zm5.4-7.3c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.6c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.1-.3-.2-.6-.4z"/>
+    </svg>
+  </a>
 
   <!-- Biblioteca do Supabase (CDN) — obrigatório carregar ANTES do catalogo.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="catalogo.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a399e0749a51f262',t:'MTc4OTE2MzMwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
