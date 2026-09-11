@@ -14,11 +14,12 @@ const mensagem = document.querySelector("#msg-catalogo");
 const selectOrdenar = document.querySelector("#ordenar-catalogo");
 const chipsCategoria = document.querySelector("#chips-categoria");
 
-const CATEGORIAS = ["Tenis", "Roupa Masculina", "Roupa Feminina", "Infantil", "Outros"];
+const CATEGORIAS = ["Roupas", "Calçados", "Acessórios", "Infantil", "Pets", "Utilidades para Casa"];
 const MAX_FOTOS = 4;
 
 let produtosAtual = [];
 let filtroCategoria = "Todos";
+let filtroGenero = "";
 let ordem = "recentes";
 let carrossels = [];
 
@@ -54,7 +55,7 @@ async function carregarCatalogo() {
 
   const { data: produtos, error } = await dbPublico
     .from("produtos")
-    .select("id, nome, quantidade, preco, foto_url, fotos, tamanhos, numeros, categoria, created_at")
+    .select("id, nome, quantidade, preco, foto_url, fotos, tamanhos, numeros, categoria, genero, cor, created_at")
     .gt("quantidade", 0)
     .limit(300);
 
@@ -78,7 +79,7 @@ function montarChips() {
   const presentes = CATEGORIAS.filter(
     (c) => produtosAtual.some((p) => p.categoria === c)
   );
-  if (!presentes.includes(filtroCategoria) && filtroCategoria !== "Todos")
+  if (filtroCategoria !== "Todos" && !presentes.includes(filtroCategoria))
     filtroCategoria = "Todos";
   const opcoes = ["Todos", ...presentes];
   chipsCategoria.innerHTML = opcoes.map((c) =>
@@ -95,7 +96,9 @@ function montarChips() {
 
 function renderizar() {
   let lista = produtosAtual.filter(
-    (p) => filtroCategoria === "Todos" || p.categoria === filtroCategoria
+    (p) =>
+      (filtroCategoria === "Todos" || p.categoria === filtroCategoria) &&
+      (!filtroGenero || p.genero === filtroGenero)
   );
   const ordenadores = {
     recentes: (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
@@ -138,12 +141,20 @@ function card(produto) {
   return `
     <article class="card-produto">
       ${imagem}
-      ${produto.categoria
-        ? `<span class="badge-cat">${escapar(produto.categoria)}</span>`
-        : ""}
+      <div class="badge-linha">
+        ${produto.categoria
+          ? `<span class="badge-cat">${escapar(produto.categoria)}</span>`
+          : ""}
+        ${produto.genero
+          ? `<span class="badge-gen">${escapar(produto.genero)}</span>`
+          : ""}
+      </div>
       <h2>${escapar(produto.nome)}</h2>
       ${produto.numeros
         ? `<p class="numeros">Números: ${escapar(produto.numeros)}</p>`
+        : ""}
+      ${produto.cor
+        ? `<p class="cor-produto">🎨 ${escapar(produto.cor)}</p>`
         : ""}
       ${produto.tamanhos
         ? `<p class="tamanhos">${escapar(produto.tamanhos)}</p>`
@@ -152,12 +163,12 @@ function card(produto) {
       <p class="disponibilidade">
         ${produto.quantidade} unidade(s) disponível(is)
       </p>
-      <p class="contato">📱 (31) 97189-2234 · Nova Pampulha, Vespasiano/MG</p>
+      <p class="contato">📱 (31) 8886-6910 · Nova Pampulha, Vespasiano/MG</p>
       <a
         class="btn"
         target="_blank"
         rel="noopener"
-        href="https://wa.me/5531971892234?text=${encodeURIComponent(
+        href="https://wa.me/553188866910?text=${encodeURIComponent(
           `Olá! Tenho interesse no produto: ${produto.nome}`
          )}">
         Tenho interesse
@@ -191,6 +202,48 @@ function irPara(c, n) {
 carregarCatalogo();
 setInterval(carregarCatalogo, 30000);
 setInterval(() => carrossels.forEach((c) => irPara(c, c.i + 1)), 3500);
+
+// ---------- filtros: navbar + gênero ----------
+const NAV_FILTROS = {
+  inicio:     { genero: "", categoria: "Todos" },
+  masculino: { genero: "Masculino", categoria: "Todos" },
+  feminino:  { genero: "Feminino", categoria: "Todos" },
+  infantil:  { genero: "Infantil", categoria: "Todos" },
+  pets:      { genero: "", categoria: "Pets" },
+  utilidades:{ genero: "", categoria: "Utilidades para Casa" },
+};
+function aplicarFiltro(f) {
+  filtroGenero = f.genero;
+  filtroCategoria = f.categoria;
+  const sel = document.querySelector("#sel-genero");
+  if (sel) sel.value = f.genero || "";
+  renderizar();
+}
+document.querySelectorAll("[data-filtro]").forEach((a) =>
+  a.addEventListener("click", (e) => {
+    const f = NAV_FILTROS[a.dataset.filtro];
+    if (!f) return;
+    aplicarFiltro(f);
+    document.querySelectorAll("[data-filtro]").forEach((x) =>
+      x.classList.toggle("ativa", x === a));
+    if (a.dataset.filtro !== "inicio")
+      e.preventDefault();
+    document.querySelector("#produtos").scrollIntoView({ behavior: "smooth" });
+  }));
+document.querySelector("#sel-genero").addEventListener("change", (e) => {
+  filtroGenero = e.target.value;
+  renderizar();
+});
+
+// ---------- menu mobile (hambúrguer) ----------
+(function menuMobile() {
+  const toggle = document.querySelector("#nav-toggle");
+  const links = document.querySelector("#nav-links");
+  if (!toggle || !links) return;
+  toggle.addEventListener("click", () => links.classList.toggle("aberto"));
+  links.querySelectorAll("a").forEach((a) =>
+    a.addEventListener("click", () => links.classList.remove("aberto")));
+})();
 
 // ---------- carrossel de banners (topo) ----------
 (function bannerCarrossel() {
