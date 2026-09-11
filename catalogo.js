@@ -192,6 +192,25 @@ carregarCatalogo();
 setInterval(carregarCatalogo, 30000);
 setInterval(() => carrossels.forEach((c) => irPara(c, c.i + 1)), 3500);
 
+// ---------- carrossel de banners (topo) ----------
+(function bannerCarrossel() {
+  const slides = [...document.querySelectorAll(".banner-slide")];
+  const dots = [...document.querySelectorAll(".banner-dot")];
+  let i = 0;
+  if (slides.length < 2) return;
+
+  function irPara(n) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach((s, x) => s.classList.toggle("ativa", x === i));
+    dots.forEach((d, x) => d.classList.toggle("ativa", x === i));
+  }
+
+  dots.forEach((d, n) => d.addEventListener("click", () => irPara(n)));
+  document.querySelector("#banner-ant")?.addEventListener("click", () => irPara(i - 1));
+  document.querySelector("#banner-prox")?.addEventListener("click", () => irPara(i + 1));
+  setInterval(() => irPara(i + 1), 5000); // troca sozinho a cada 5s
+})();
+
 // Ordenação escolhida pelo cliente
 selectOrdenar.addEventListener("change", () => {
   ordem = selectOrdenar.value;
