@@ -1,10 +1,16 @@
 // =====================================================
-// BAZAR EL SHADAY — app.js (admin da loja)
+// BAZAR EL SHADAY — app.js (admin da loja) — v3
 // SEGURANÇA: RLS no banco (Supabase) — só usuário LOGADO
 // lê/escreve os dados; o catálogo público (anon) só lê
-// produtos. Sem chave secreta no navegador, sem dependência
-// de Edge Function (que ficou com o caminho público travado
-// na plataforma — ver LEIA-ME, seção PLANO B).
+// produtos com estoque. Fotos no Storage (bucket "fotos").
+//
+// Recursos v3:
+//  - Editar produto (nome, qtd, preço, categoria, tamanhos,
+//    números e fotos)
+//  - Até 4 fotos por produto (carrossel no catálogo)
+//  - Categoria: Tenis, Roupa Masculina, Roupa Feminina,
+//    Infantil, Outros
+//  - Números selecionáveis p/ a categoria Tenis (19–46)
 //
 // Configuração (já preenchida para o projeto do bazar):
 //   - SUPABASE_URL            (Project Settings > API)
@@ -22,64 +28,24 @@ const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_saYnOUna58kgHNNHfKZgOg_hdhs_gm9
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+const CATEGORIAS = ["Tenis", "Roupa Masculina", "Roupa Feminina", "Infantil", "Outros"];
+const CATEGORIAS_ROUPA = ["Roupa Masculina", "Roupa Feminina", "Infantil"];
+const MAX_FOTOS = 4;
+const MAX_FOTO_BYTES = 2 * 1024 * 1024;
+
 // ---------- utilidades ----------
 const $ = (sel) => document.querySelector(sel);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+const esc = (s) => String(s ?? "").replace(/[&<>\"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const moeda = (n) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fotosDe = (p) =>
+  (Array.isArray(p.fotos) && p.fotos.length ? p.fotos
+    : p.foto_url ? [p.foto_url] : []).slice(0, MAX_FOTOS);
 
-// Chamada única à base de dados.
-// PLANO B (sem Edge Function): o app fala DIRETO com o banco via
-// PostgREST, usando o token do login + RLS (só logado lê/escreve —
-// a segurança fica no banco, que é o modelo oficial do Supabase).
 function amigavel(error) {
   if (error.code === "42501")
     return "sem permissão (precisa estar logada — entre de novo)";
   return error.message;
-}
-
-async function api(payload) {
-  const { cmd, tabela, id, dados, produtoId, qtd } = payload;
-
-  if (cmd === "list") {
-    const q = tabela === "vendas"
-      ? db.from("vendas").select("*, produtos(nome)")
-          .order("created_at", { ascending: false }).limit(30)
-      : db.from(tabela).select("*").order("nome");
-    const { data, error } = await q;
-    if (error) throw new Error(amigavel(error));
-    return data;
-  }
-
-  if (cmd === "add") {
-    const { error } = await db.from(tabela).insert(dados);
-    if (error) throw new Error(amigavel(error));
-    return { ok: true };
-  }
-
-  if (cmd === "del") {
-    const { error } = await db.from(tabela).delete().eq("id", id);
-    if (error) throw new Error(amigavel(error));
-    return { ok: true };
-  }
-
-  if (cmd === "venda") {
-    const { data: p, error: e0 } = await db.from("produtos")
-      .select("id, nome, quantidade, preco").eq("id", produtoId).single();
-    if (e0 || !p) throw new Error("produto não encontrado");
-    if (p.quantidade < qtd)
-      throw new Error("estoque insuficiente (tem " + p.quantidade + ")");
-    const total = Math.round((p.preco || 0) * qtd * 100) / 100;
-    const { error: e1 } = await db.from("vendas")
-      .insert({ produto_id: p.id, quantidade: qtd, total });
-    if (e1) throw new Error(amigavel(e1));
-    const { error: e2 } = await db.from("produtos")
-      .update({ quantidade: p.quantidade - qtd }).eq("id", p.id);
-    if (e2) throw new Error(amigavel(e2));
-    return { ok: true, produto: p.nome, qtd, total };
-  }
-
-  throw new Error("comando inválido");
 }
 
 // ---------- abas ----------
@@ -113,73 +79,182 @@ db.auth.onAuthStateChange((_ev, session) => {
 
 // ---------- ESTOQUE ----------
 let produtos = [];
+let editandoId = null;   // id do produto em edição (null = modo adicionar)
+let fotosManter = [];    // fotos existentes que continuam no produto
+
+// chips de números (19 a 46) — gerados uma vez
+(function montarChips() {
+  const box = $("#chips-numeros");
+  for (let n = 19; n <= 46; n++) {
+    const lb = document.createElement("label");
+    lb.className = "chip-num";
+    lb.innerHTML = `<input type="checkbox" value="${n}"><span>${n}</span>`;
+    box.appendChild(lb);
+  }
+})();
+
+// mostra/oculta campos conforme a categoria escolhida
+function mostrarCondicionais() {
+  const cat = $("#p-categoria").value;
+  $("#campo-numeros").classList.toggle("oculta", cat !== "Tenis");
+  $("#campo-tamanhos").classList.toggle("oculta", !CATEGORIAS_ROUPA.includes(cat));
+}
+$("#p-categoria").addEventListener("change", mostrarCondicionais);
+mostrarCondicionais();
+
+function numerosMarcados() {
+  return [...$("#chips-numeros").querySelectorAll("input:checked")]
+    .map((cb) => cb.value).join(" ");
+}
+
+function renderizarPreview() {
+  const box = $("#foto-preview");
+  box.innerHTML = fotosManter.map((url, i) =>
+    `<span class="mini-foto"><img src="${esc(url)}" alt="" />
+      <button type="button" data-rm="${i}" title="Tirar esta foto">×</button></span>`
+  ).join("");
+  box.querySelectorAll("button[data-rm]").forEach((b) =>
+    b.addEventListener("click", () => {
+      fotosManter.splice(+b.dataset.rm, 1);
+      renderizarPreview();
+    })
+  );
+}
+
+async function enviarFotos(arquivos, btn) {
+  const urls = [];
+  for (const file of arquivos) {
+    if (file.size > MAX_FOTO_BYTES) throw new Error("foto muito grande (máx. 2 MB)");
+    btn.textContent = "Enviando foto…";
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const caminho = "bazar/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) +
+      "." + (/[a-z0-9]{2,4}$/.test(ext) ? ext : "jpg");
+    const { error } = await db.storage.from("fotos").upload(caminho, file);
+    if (error) throw new Error("falha ao enviar a foto: " + error.message);
+    urls.push(db.storage.from("fotos").getPublicUrl(caminho).data.publicUrl);
+  }
+  return urls;
+}
 
 async function carregarEstoque() {
   try {
-    produtos = (await api({ cmd: "list", tabela: "produtos" })) || [];
+    produtos = (await db.from("produtos").select("*").order("nome").then((r) => {
+      if (r.error) throw new Error(amigavel(r.error));
+      return r.data;
+    })) || [];
   } catch (e) { produtos = []; return alert("Erro: " + e.message); }
   const ul = $("#lista-produtos");
   ul.innerHTML = produtos.length
     ? produtos.map((p) => `
       <li class="item">
-        ${p.foto_url
-          ? `<img class="thumb" src="${esc(p.foto_url)}" alt="" />`
-          : ""}
+        ${fotosDe(p).length
+          ? `<img class="thumb" src="${esc(fotosDe(p)[0])}" alt="" />`
+          : '<span class="thumb emoji">🛍️</span>'}
         <div class="info">
-          <span class="nome">${esc(p.nome)}</span>
+          <span class="nome">${esc(p.nome)}${p.categoria ? ` <em class="cat-item">(${esc(p.categoria)})</em>` : ""}</span>
           <span class="det">${p.quantidade} un. · ${moeda(p.preco)}${
-            p.tamanhos ? " · " + esc(p.tamanhos) : ""
-          }</span>
+            p.numeros ? " · n.º " + esc(p.numeros) : ""}${
+            p.tamanhos ? " · " + esc(p.tamanhos) : ""}</span>
         </div>
-        <button class="btn btn-mini" data-del-p="${p.id}">Remover</button>
+        <span class="acoes-item">
+          <button class="btn btn-mini" data-edit-p="${p.id}">Editar</button>
+          <button class="btn btn-mini" data-del-p="${p.id}">Remover</button>
+        </span>
       </li>`).join("")
     : '<li class="empty">Nenhum produto cadastrado.</li>';
   $("#v-produto").innerHTML =
     '<option value="">Escolha o produto…</option>' +
-    produtos.map((p) => `<option value="${p.id}">${esc(p.nome)} — ${moeda(p.preco)}</option>`).join("");
+    produtos.map((p) =>
+      `<option value="${p.id}">${esc(p.nome)}${p.categoria ? ` (${esc(p.categoria)})` : ""} — ${moeda(p.preco)}</option>`).join("");
   ul.querySelectorAll("[data-del-p]").forEach((b) =>
     b.addEventListener("click", async () => {
-      if (!confirm("Remover este produto?")) return;
+      if (!confirm("Remover este produto? (Sai do catálogo também)")) return;
       try {
-        await api({ cmd: "del", tabela: "produtos", id: b.dataset.delP });
+        const p = produtos.find((x) => x.id === b.dataset.delP);
+        const { error } = await db.from("produtos").delete().eq("id", b.dataset.delP);
+        if (error) throw new Error(amigavel(error));
+        // tenta apagar as fotos do Storage (melhor esforço)
+        (p ? fotosDe(p) : []).forEach((url) => {
+          const caminho = decodeURIComponent(url.split("/public/fotos/")[1] || "");
+          if (caminho) db.storage.from("fotos").remove([caminho]).catch(() => {});
+        });
+        if (editandoId === b.dataset.delP) cancelarEdicao();
         carregarEstoque();
       } catch (e) { alert("Erro: " + e.message); }
     })
   );
+  ul.querySelectorAll("[data-edit-p]").forEach((b) =>
+    b.addEventListener("click", () => iniciarEdicao(b.dataset.editP))
+  );
 }
+
+function iniciarEdicao(id) {
+  const p = produtos.find((x) => x.id === id);
+  if (!p) return;
+  editandoId = id;
+  $("#p-nome").value = p.nome || "";
+  $("#p-qtd").value = p.quantidade ?? "";
+  $("#p-preco").value = p.preco ?? "";
+  $("#p-categoria").value = p.categoria || "";
+  mostrarCondicionais();
+  $("#p-tam").value = p.tamanhos || "";
+  const nums = (p.numeros || "").split(/\s+/).filter(Boolean);
+  $("#chips-numeros").querySelectorAll("input[type=checkbox]").forEach((cb) =>
+    (cb.checked = nums.includes(cb.value)));
+  fotosManter = fotosDe(p);
+  renderizarPreview();
+  $("#btn-salvar-produto").textContent = "Salvar alterações";
+  $("#btn-cancelar-edicao").classList.remove("oculta");
+  $("#form-produto").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelarEdicao() {
+  editandoId = null;
+  fotosManter = [];
+  renderizarPreview();
+  $("#form-produto").reset();
+  mostrarCondicionais();
+  $("#btn-salvar-produto").textContent = "Adicionar";
+  $("#btn-cancelar-edicao").classList.add("oculta");
+}
+$("#btn-cancelar-edicao").addEventListener("click", cancelarEdicao);
 
 $("#form-produto").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const btn = e.target.querySelector("button[type=submit]");
+  const btn = $("#btn-salvar-produto");
+  const cat = $("#p-categoria").value;
   try {
     const dados = {
       nome: $("#p-nome").value.trim(),
       quantidade: +$("#p-qtd").value,
       preco: +$("#p-preco").value,
+      categoria: cat || null,
+      tamanhos: CATEGORIAS_ROUPA.includes(cat) ? ($("#p-tam").value.trim() || null) : null,
+      numeros: cat === "Tenis" ? (numerosMarcados() || null) : null,
     };
-    const tam = $("#p-tam").value.trim();
-    if (tam) dados.tamanhos = tam;
 
-    // Foto opcional: sobe pro Storage (bucket "fotos") antes de gravar
-    const file = $("#p-foto").files[0] || null;
-    if (file) {
-      if (file.size > 2 * 1024 * 1024)
-        throw new Error("foto muito grande (máx. 2 MB)");
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const caminho = "bazar/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) +
-        "." + (/[a-z0-9]{2,4}$/.test(ext) ? ext : "jpg");
-      btn.textContent = "Enviando foto…";
-      const { error: eFoto } = await db.storage.from("fotos").upload(caminho, file);
-      if (eFoto) throw new Error("falha ao enviar a foto: " + eFoto.message);
-      dados.foto_url = db.storage.from("fotos").getPublicUrl(caminho).data.publicUrl;
+    // Fotos: mantém as existentes (sem as marcadas com ×) + as novas
+    const novosArquivos = [...$("#p-fotos").files];
+    if (novosArquivos.length > MAX_FOTOS - fotosManter.length)
+      throw new Error(`máximo de ${MAX_FOTOS} fotos (o produto já tem ${fotosManter.length})`);
+    const novas = await enviarFotos(novosArquivos, btn);
+    dados.fotos = [...fotosManter, ...novas];
+
+    btn.textContent = editandoId ? "Salvando…" : "Adicionando…";
+    if (editandoId) {
+      const { error } = await db.from("produtos").update(dados).eq("id", editandoId);
+      if (error) throw new Error(amigavel(error));
+    } else {
+      const { error } = await db.from("produtos").insert(dados);
+      if (error) throw new Error(amigavel(error));
     }
-
-    btn.textContent = "Salvando…";
-    await api({ cmd: "add", tabela: "produtos", dados });
+    cancelarEdicao();
     e.target.reset();
     carregarEstoque();
   } catch (err) { alert("Erro: " + err.message); }
-  finally { btn.textContent = "Adicionar"; }
+  finally {
+    btn.textContent = editandoId ? "Salvar alterações" : "Adicionar";
+  }
 });
 
 // ---------- VENDAS ----------
@@ -188,21 +263,45 @@ $("#form-venda").addEventListener("submit", async (e) => {
   const produto = produtos.find((p) => p.id === $("#v-produto").value);
   if (!produto) return;
   const qtd = +$("#v-qtd").value;
-  try {
-    const r = await api({ cmd: "venda", produtoId: produto.id, qtd });
-    $("#msg-venda").textContent = "Venda registrada: " + r.produto + " × " + qtd + " = " + moeda(r.total);
-    $("#msg-venda").className = "msg ok";
-    e.target.reset();
-    carregarTudo();
-  } catch (err) {
-    $("#msg-venda").textContent = err.message;
+  const { data: p, error: e0 } = await db.from("produtos")
+    .select("id, nome, quantidade, preco").eq("id", produto.id).single();
+  if (e0 || !p) {
+    $("#msg-venda").textContent = "Produto não encontrado (recarregue a lista)";
     $("#msg-venda").className = "msg erro";
+    return;
   }
+  if (p.quantidade < qtd) {
+    $("#msg-venda").textContent = "Estoque insuficiente (tem " + p.quantidade + ")";
+    $("#msg-venda").className = "msg erro";
+    return;
+  }
+  const total = Math.round((p.preco || 0) * qtd * 100) / 100;
+  const { error: e1 } = await db.from("vendas")
+    .insert({ produto_id: p.id, quantidade: qtd, total });
+  if (e1) {
+    $("#msg-venda").textContent = "Erro: " + amigavel(e1);
+    $("#msg-venda").className = "msg erro";
+    return;
+  }
+  const { error: e2 } = await db.from("produtos")
+    .update({ quantidade: p.quantidade - qtd }).eq("id", p.id);
+  if (e2) {
+    $("#msg-venda").textContent = "Venda gravada, mas o estoque não baixou: " + amigavel(e2);
+    $("#msg-venda").className = "msg erro";
+    return;
+  }
+  $("#msg-venda").textContent = "Venda registrada: " + p.nome + " × " + qtd + " = " + moeda(total);
+  $("#msg-venda").className = "msg ok";
+  e.target.reset();
+  carregarTudo();
 });
 
 async function carregarVendas() {
   let vendas = [];
-  try { vendas = (await api({ cmd: "list", tabela: "vendas" })) || []; } catch {}
+  const { data, error } = await db.from("vendas")
+    .select("*, produtos(nome)")
+    .order("created_at", { ascending: false }).limit(30);
+  if (!error) vendas = data || [];
   const hoje = new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD
   const ul = $("#lista-vendas");
   const deHoje = vendas.filter((v) => (v.created_at || "").startsWith(hoje));
@@ -221,7 +320,8 @@ async function carregarVendas() {
 // ---------- CLIENTES ----------
 async function carregarClientes() {
   let clientes = [];
-  try { clientes = (await api({ cmd: "list", tabela: "clientes" })) || []; } catch (e) { return; }
+  const { data, error } = await db.from("clientes").select("*").order("nome");
+  if (!error) clientes = data || [];
   const ul = $("#lista-clientes");
   ul.innerHTML = clientes.length
     ? clientes.map((c) => `
@@ -236,27 +336,22 @@ async function carregarClientes() {
   ul.querySelectorAll("[data-del-c]").forEach((b) =>
     b.addEventListener("click", async () => {
       if (!confirm("Remover este cliente?")) return;
-      try {
-        await api({ cmd: "del", tabela: "clientes", id: b.dataset.delC });
-        carregarClientes();
-      } catch (e) { alert("Erro: " + e.message); }
+      const { error } = await db.from("clientes").delete().eq("id", b.dataset.delC);
+      if (error) alert("Erro: " + amigavel(error));
+      carregarClientes();
     })
   );
 }
 
 $("#form-cliente").addEventListener("submit", async (e) => {
   e.preventDefault();
-  try {
-    await api({
-      cmd: "add", tabela: "clientes",
-      dados: {
-        nome: $("#c-nome").value.trim(),
-        telefone: $("#c-telefone").value.trim(),
-      },
-    });
-    e.target.reset();
-    carregarClientes();
-  } catch (err) { alert("Erro: " + err.message); }
+  const { error } = await db.from("clientes").insert({
+    nome: $("#c-nome").value.trim(),
+    telefone: $("#c-telefone").value.trim(),
+  });
+  if (error) return alert("Erro: " + amigavel(error));
+  e.target.reset();
+  carregarClientes();
 });
 
 // ---------- iniciar ----------
