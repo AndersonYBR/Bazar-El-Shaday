@@ -24,11 +24,54 @@ main{max-width:900px;margin:0 auto;padding:16px}
 }
 .btn-atualizar:hover{background:var(--primaria);color:#fff}
 
+/* ---------- ordenar + filtro de categoria ---------- */
+.toolbar{display:flex;align-items:center;gap:10px;margin:0 0 10px;flex-wrap:wrap}
+.toolbar label{font-size:13px;color:var(--muted);font-weight:700}
+#ordenar-catalogo{
+  padding:9px 12px;border-radius:10px;border:1px solid var(--borda);
+  background:#fff;font-size:14px;color:var(--texto);
+}
+.chips-categoria{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.chip-cat{
+  border:1px solid var(--borda);background:#fff;border-radius:20px;
+  padding:7px 14px;font-size:13px;font-weight:600;color:var(--texto);cursor:pointer;
+}
+.chip-cat:hover{border-color:var(--primaria);color:var(--primaria)}
+.chip-cat.ativa{background:var(--primaria);border-color:var(--primaria);color:#fff}
+
 .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 .tamanhos{
   font-size:13px;font-weight:700;color:var(--muted);margin:0;
   background:var(--primaria-claro);border-radius:8px;padding:4px 8px;text-align:center;
 }
+.numeros{
+  font-size:12px;font-weight:700;color:var(--texto);margin:0;
+  background:#eef1f6;border-radius:8px;padding:4px 8px;text-align:center;
+}
+.badge-cat{
+  align-self:flex-start;background:var(--primaria);color:#fff;
+  font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;
+}
+
+/* ---------- carrossel de fotos (tamanho padrão) ---------- */
+.carousel{
+  position:relative;height:170px;overflow:hidden;border-radius:10px;
+  background:var(--primaria-claro);margin-bottom:4px;
+}
+.carousel .slide{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:0;transition:opacity .45s ease;
+}
+.carousel .slide.ativa{opacity:1}
+.dots{
+  position:absolute;bottom:8px;left:0;right:0;display:flex;
+  justify-content:center;gap:6px;z-index:2;
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);
+  cursor:pointer;transition:background .3s;
+}
+.dot.ativa{background:#fff}
 
 .card-produto{
   background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);
@@ -54,4 +97,3 @@ main{max-width:900px;margin:0 auto;padding:16px}
 .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:30px 0;font-size:15px}
 
 footer{text-align:center;color:var(--muted);font-size:13px;padding:24px 16px 40px}
- 
