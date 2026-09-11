@@ -121,6 +121,13 @@ function renderizar() {
 
   listaCatalogo.innerHTML = lista.map((p) => card(p)).join("");
   iniciarCarrossels();
+
+  // clique no card (fora dos botões) abre a página do produto
+  listaCatalogo.querySelectorAll(".card-produto").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("a,button")) return;
+      location.href = "produto.html?produto=" + el.dataset.id;
+    }));
 }
 
 function card(produto) {
@@ -139,7 +146,7 @@ function card(produto) {
     : '<div class="imagem-produto">🛍️</div>';
 
   return `
-    <article class="card-produto">
+    <article class="card-produto" data-id="${produto.id}" title="Ver detalhes">
       ${imagem}
       <div class="badge-linha">
         ${produto.categoria
