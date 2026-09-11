@@ -1,57 +1,92 @@
-BAZAR EL SHADAY — App grátis com portão de segurança (passo a passo)
+BAZAR EL SHADAY — App grátis com segurança RLS (passo a passo)
 
-ARQUITETURA (tudo passa pelo "portão"):
-  App (navegador) ──> Edge Function "api" ──> Banco Supabase
-                        │  JWT verificado
-                        │  rate limit 60 req/min/usuário
-                        │  whitelist de comandos e campos
-                        └  chave service_role SÓ existe aqui
+ARQUITETURA (duas páginas, MESMA tabela "produtos"):
+  1) APP da loja (index.html) — escrita DIRETA no banco com RLS:
+     App (logado) ──> Banco Supabase (PostgREST)
+                       token do login (JWT) + RLS no banco:
+                       SÓ usuário autenticado lê/escreve
+  2) CATÁLOGO público (catalogo.html) — leitura direta:
+     Catálogo ──> Banco Supabase (PostgREST)
+                 com PUBLISHABLE KEY + RLS (anon só lê produtos)
+  As duas se conectam pelo banco: o que é cadastrado no app
+  (quantidade > 0) aparece SOZINHO no catálogo.
 
+  NOTA HISTÓRICA: a versão anterior usava um "portão" (Edge
+  Function). O caminho público das Edge Functions deste projeto
+  ficou travado na plataforma (requests externos ficam 150s sem
+  resposta; o Test interno do dashboard funciona). Por isso o
+  PLANO B: segurança via RLS direto no banco (modelo oficial do
+  Supabase, mesma proteção). A função continua existindo no
+  projeto mas o app NÃO a usa.
+
+CHAVES (novo sistema do Supabase):
+  - PUBLISHABLE (sb_publishable_...) = pública, usa no NAVEGADOR
+    (app.js e catalogo.js). A proteção real está no RLS do banco:
+    anon só lê produtos; ler/escrever o resto exige login.
+  - SECRET (sb_secret_...) = NUNCA no navegador. No plano B nem é
+    usada no app (só existiria em Edge Functions).
+
+PASSO A PASSO (projeto novo do zero)
 1. BANCO + LOGIN (Supabase)
    a) Crie conta grátis em supabase.com e crie um projeto.
    b) SQL Editor: cole TODO o schema.sql e clique em Run.
-   c) Authentication > Users > Add user: crie o login da loja (e-mail + senha).
+      (ou: MIGRACAO_PlanB.sql — recria as políticas de RLS;
+      idempotente, pode rodar de novo sem quebrar nada.)
+   c) Authentication > Users > Add user: crie o login da loja
+      (e-mail + senha).
 
-2. RATE LIMIT (Upstash Redis — grátis)
-   a) Crie conta grátis em console.upstash.com.
-   b) Crie um Redis Database (qualquer região).
-   c) Anote os dois valores da aba "REST URL": a URL e o TOKEN.
+2. APP DA LOJA (index.html) + CATÁLOGO (catalogo.html)
+   Ambos já vêm configurados no projeto do bazar. No topo do app.js:
+     - SUPABASE_URL = Project Settings > API > Project URL
+     - SUPABASE_PUBLISHABLE_KEY = a chave PUBLISHABLE (sb_publishable_...)
+   O catálogo (catalogo.js) usa a MESMA publishable key e lê a tabela
+   "produtos". A chave publishable é pública por design — a proteção
+   está no RLS. Nunca use a secret no navegador.
+   Os 3 arquivos do catálogo (catalogo.html/css/js) ficam na mesma
+   pasta e são acessados em .../catalogo.html
 
-3. O PORTÃO (Edge Function "api")
-   a) No Supabase: Edge Functions > New function.
-   b) Nome: api
-   c) Cole TODO o conteúdo de supabase/functions/api/index.ts no editor.
-   d) Em "Secrets" (ou Environment variables, tipo Secret), adicione:
-      - SUPABASE_SERVICE_ROLE_KEY  (Supabase > Settings > API — a chave service_role)
-      - UPSTASH_REDIS_REST_URL     (passo 2c)
-      - UPSTASH_REDIS_REST_TOKEN   (passo 2c)
-   e) Deploy. IMPORTANTE: mantenha a verificação de JWT ligada (não use
-      a opção --no-verify-jwt). Sem token válido a função nem roda.
-
-4. APP
-   No app.js, cole no topo: SUPABASE_URL e SUPABASE_ANON_KEY
-   (Supabase > Settings > API > Project URL e a chave "anon public").
-   A chave anon é pública por design — a proteção real está no portão
-   (rate limit + whitelist + chave forte escondida) e no RLS do banco.
-
-5. HOSPEDAGEM GRÁTIS (Cloudflare Pages)
+3. HOSPEDAGEM GRÁTIS (GitHub Pages)
    a) Suba a pasta bazar-app num repositório no GitHub.
-   b) cloudflare.com > Workers & Pages > Create > Pages > conecte o repositório.
-   c) Pronto: https://...pages.dev com HTTPS automático.
-   (Alternativas: Netlify ou GitHub Pages, também grátis.)
+   b) Pages: publicar a partir da branch main (raiz do repositório).
+   c) Pronto: https://<usuario>.github.io com HTTPS automático.
 
-SEGURANÇA ATIVA NESTA VERSÃO
+RECURSOS (v3)
+   - Estoque: adicionar, EDITAR e remover produtos
+   - Até 4 FOTOS por produto (carrossel automático no catálogo)
+   - CATEGORIA: Tenis, Roupa Masculina, Roupa Feminina, Infantil, Outros
+   - NÚMEROS selecionáveis (19–46) para a categoria Tenis
+   - Tamanhos livres (ex.: P, M, G) para as categorias de roupa
+   - Catálogo: carrossel de fotos, badge de categoria, números,
+     CONTATO WhatsApp no card, filtro por categoria, ordenação
+     (recentes / menor preço / maior preço / nome A–Z) e
+     auto-atualização a cada 30s
+   - SQL da v3: ATUALIZACAO_v3.sql (colunas fotos/categoria/numeros;
+   idempotente)
+
+SEGURANÇA ATIVA NESTA VERSÃO (plano B — RLS)
    1. HTTPS automático no hosting
-   2. JWT verificado ANTES de qualquer operação (login obrigatório)
-   3. Rate limit: 60 requisições por minuto por usuário (429 além disso)
-   4. Whitelist: só comandos list/add/del/venda; só 3 tabelas; só campos
-      válidos; id sempre UUID; venda valida estoque antes de gravar
-   5. service_role só existe dentro da função (Secret) — nunca no navegador
-   6. RLS no banco continua ativo (2ª barreira)
-   7. Senhas com hash (Supabase); escape anti-XSS no app; queries via lib oficial
-   8. Backup diário automático (plano grátis do Supabase)
+   2. Login obrigatório: sem sessão válida, o RLS bloqueia toda
+      leitura/escrita de clientes e vendas (e de produtos)
+   3. Anon (sem login) SÓ lê produtos — é o que o catálogo usa
+   4. Nunca há chave secreta no navegador
+   5. Senhas com hash (Supabase); escape anti-XSS no app; queries
+      via lib oficial (supabase-js)
+   6. Backup diário automático (plano grátis do Supabase)
+
+TROUBLESHOOTING
+   - "sem permissão (precisa estar logada...)" = a sessão expirou
+     ou não existe: entre com o usuário criado em Authentication
+     > Users. Se persistir, rode MIGRACAO_PlanB.sql de novo.
+   - Catálogo vazio? Rode a política pública no SQL Editor:
+     create policy "produtos_publico_select" on produtos
+       for select to anon using (true);
+   - Erros de CORS/chave: confira SUPABASE_URL (só
+     https://<projeto>.supabase.co) e a publishable key.
 
 OBRIGATÓRIO PRA NÃO QUEBRAR
-   - A função e o app precisam estar no MESMO projeto Supabase.
-   - Se trocar a chave anon/service_role, atualize também nos Secrets.
-   - Limite de req/min: const LIMITE_POR_MIN no topo do index.ts.
+   - Se trocar a chave publishable, atualize em app.js E catalogo.js.
+   - O login do site = usuário criado em Supabase > Authentication
+     > Users (e-mail + senha).
+   - RLS: as políticas de produtos/clientes/vendas (authenticated)
+     + produtos_publico_select (anon) são o que protege tudo —
+     não remova essas policies do banco.
