@@ -189,6 +189,7 @@ function iniciarEdicaoProduto(id) {
   const nums = (p.numeros || "").split(/\s+/).filter(Boolean);
   $("#chips-numeros").querySelectorAll("input[type=checkbox]").forEach((cb) =>
     (cb.checked = nums.includes(cb.value)));
+  $("#p-desc").value = p.descricao || "";
   fotosManter = fotosDe(p);
   renderizarPreview();
   $("#btn-salvar-produto").textContent = "Salvar alterações";
@@ -222,6 +223,7 @@ $("#form-produto").addEventListener("submit", async (e) => {
       cor: $("#p-cor").value.trim() || null,
       tamanhos: CATEGORIAS_COM_TAMANHO.includes(cat) ? ($("#p-tam").value.trim() || null) : null,
       numeros: cat === "Calçados" ? (numerosMarcados() || null) : null,
+      descricao: $("#p-desc").value.trim() || null,
     };
     const novosArquivos = [...$("#p-fotos").files];
     if (novosArquivos.length > MAX_FOTOS - fotosManter.length)
