@@ -15,7 +15,7 @@
   <!-- ============ NAVBAR (igual ao catálogo) ============ -->
   <nav class="navbar">
     <a href="catalogo.html" class="marca" aria-label="Bazar da Val — catálogo">
-      <img src="logodaval.jpg" alt="Bazar da Val" class="logo" /><span class="slogan-nav">
+      <img src="logodaval.jpg" alt="Bazar da Val" class="logo" onerror="this.onerror=null;this.outerHTML='<span class=&quot;logo logo-fallback&quot;>🛍️</span>'" /><span class="slogan-nav">
   <span class="t1">Do seu</span> <span class="t2">tamanho,</span> <span class="t3">do seu</span> <span class="t4">jeito,</span><br>
   <span class="t5">do seu</span> <em class="t6 slogan-preco">preço<svg viewBox="0 0 60 8" class="swash" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5 Q 30 -2 58 4" fill="none" stroke="#1b7fbf" stroke-width="2.2" stroke-linecap="round"/></svg></em>
 </span>
@@ -41,7 +41,7 @@
   <footer id="contato" class="rodape">
     <div class="rodape-inner">
       <div class="col">
-        <img src="logodaval.jpg" alt="Bazar da Val" class="logo-rodape" />
+        <img src="logodaval.jpg" alt="Bazar da Val" class="logo-rodape" onerror="this.onerror=null;this.outerHTML='<span class=&quot;logo-rodape logo-fallback&quot;>🛍️</span>'" />
         <p class="slogan">Moda, utilidades e carinho<br>para a sua família.</p>
       </div>
       <div class="col">
@@ -70,5 +70,5 @@
   <!-- Biblioteca do Supabase (CDN) — obrigatório carregar ANTES do produto.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="produto.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b106948e43f198',t:'MTc4OTQwNjA0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
