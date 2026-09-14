@@ -252,24 +252,51 @@ document.querySelector("#sel-genero").addEventListener("change", (e) => {
     a.addEventListener("click", () => links.classList.remove("aberto")));
 })();
 
-// ---------- carrossel de banners (topo) ----------
-(function bannerCarrossel() {
-  const slides = [...document.querySelectorAll(".banner-slide")];
-  const dots = [...document.querySelectorAll(".banner-dot")];
-  let i = 0;
-  if (slides.length < 2) return;
-
-  function irPara(n) {
-    i = (n + slides.length) % slides.length;
-    slides.forEach((s, x) => s.classList.toggle("ativa", x === i));
-    dots.forEach((d, x) => d.classList.toggle("ativa", x === i));
-  }
-
-  dots.forEach((d, n) => d.addEventListener("click", () => irPara(n)));
-  document.querySelector("#banner-ant")?.addEventListener("click", () => irPara(i - 1));
-  document.querySelector("#banner-prox")?.addEventListener("click", () => irPara(i + 1));
-  setInterval(() => irPara(i + 1), 5000); // troca sozinho a cada 5s
+// ---------- navbar recolhe ao rolar ----------
+(function navbarRolagem() {
+  const nav = document.querySelector(".navbar");
+  if (!nav) return;
+  const checar = () => nav.classList.toggle("rolando", window.scrollY > 40);
+  window.addEventListener("scroll", checar, { passive: true });
+  checar();
 })();
+
+// ---------- carrossel de banners (topo) — vem do banco, com os 5 originais de reserva ----------
+let bannerTimer = null;
+const bannerState = { slides: [], dots: [], i: 0 };
+function irParaBanner(n) {
+  const { slides, dots } = bannerState;
+  bannerState.i = (n + slides.length) % slides.length;
+  slides.forEach((s, x) => s.classList.toggle("ativa", x === bannerState.i));
+  dots.forEach((d, x) => d.classList.toggle("ativa", x === bannerState.i));
+}
+function iniciarCarrossel() {
+  bannerState.slides = [...document.querySelectorAll(".banner-slide")];
+  bannerState.dots = [...document.querySelectorAll(".banner-dot")];
+  bannerState.i = 0;
+  if (bannerTimer) { clearInterval(bannerTimer); bannerTimer = null; }
+  if (bannerState.slides.length < 2) return;
+  bannerState.dots.forEach((d, n) => d.addEventListener("click", () => irParaBanner(n)));
+  bannerTimer = setInterval(() => irParaBanner(bannerState.i + 1), 5000); // troca sozinho a cada 5s
+}
+document.querySelector("#banner-ant")?.addEventListener("click", () => irParaBanner(bannerState.i - 1));
+document.querySelector("#banner-prox")?.addEventListener("click", () => irParaBanner(bannerState.i + 1));
+async function carregarBannersTopo() {
+  const { data, error } = await dbPublico.from("banners")
+    .select("url, legenda").eq("ativo", true).order("ordem").limit(10);
+  const wrap = document.querySelector(".banner-slides");
+  const dotsWrap = document.querySelector(".banner-dots");
+  if (!wrap || error || !data || !data.length) { iniciarCarrossel(); return; } // sem banco: mantém os 5 originais
+  wrap.innerHTML = data.map((b, x) =>
+    `<img class="banner-slide${x === 0 ? " ativa" : ""}" src="${escapar(b.url)}" alt="${escapar(b.legenda || "Promoção")}"${x === 0 ? "" : ' loading="lazy"'} />`
+  ).join("");
+  if (dotsWrap)
+    dotsWrap.innerHTML = data.map((_, x) =>
+      `<span class="banner-dot${x === 0 ? " ativa" : ""}" data-b="${x}"></span>`
+    ).join("");
+  iniciarCarrossel();
+}
+carregarBannersTopo();
 
 // Ordenação escolhida pelo cliente
 selectOrdenar.addEventListener("change", () => {
