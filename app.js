@@ -31,6 +31,20 @@ const fotosDe = (p) =>
   (Array.isArray(p.fotos) && p.fotos.length ? p.fotos
     : p.foto_url ? [p.foto_url] : []).slice(0, MAX_FOTOS);
 
+// ---------- log de alterações (auditoria) ----------
+async function registrarLog(acao, descricao, tabela, registroId) {
+  try {
+    const { data } = await db.auth.getUser();
+    await db.from("logs").insert({
+      acao,
+      tabela: tabela || null,
+      registro_id: registroId || null,
+      descricao,
+      usuario: data?.user?.email || "desconhecido",
+    });
+  } catch (e) { /* o log nunca deve quebrar a operação principal */ }
+}
+
 function amigavel(error) {
   if (error.code === "42501")
     return "sem permissão (precisa estar logada — entre de novo)";
@@ -45,6 +59,8 @@ document.querySelectorAll(".aba").forEach((btn) =>
     btn.classList.add("ativa");
     $("#aba-" + btn.dataset.aba).classList.remove("oculta");
     if (btn.dataset.aba === "lucro") carregarLucro();
+    if (btn.dataset.aba === "logs") carregarLogs();
+    if (btn.dataset.aba === "banners") carregarBanners();
   })
 );
 
@@ -159,6 +175,7 @@ async function carregarEstoque() {
         const p = produtos.find((x) => x.id === b.dataset.delP);
         const { error } = await db.from("produtos").delete().eq("id", b.dataset.delP);
         if (error) throw new Error(amigavel(error));
+        await registrarLog("removeu", `produto "${p ? p.nome : "desconhecido"}"`, "produtos", b.dataset.delP);
         (p ? fotosDe(p) : []).forEach((url) => {
           const caminho = decodeURIComponent(url.split("/public/fotos/")[1] || "");
           if (caminho) db.storage.from("fotos").remove([caminho]).catch(() => {});
@@ -235,9 +252,11 @@ $("#form-produto").addEventListener("submit", async (e) => {
     if (editandoId) {
       const { error } = await db.from("produtos").update(dados).eq("id", editandoId);
       if (error) throw new Error(amigavel(error));
+      await registrarLog("editou", `produto "${dados.nome}"`, "produtos", editandoId);
     } else {
-      const { error } = await db.from("produtos").insert(dados);
+      const { data: novo, error } = await db.from("produtos").insert(dados).select("id").single();
       if (error) throw new Error(amigavel(error));
+      await registrarLog("adicionou", `produto "${dados.nome}" (qtd ${dados.quantidade} · ${moeda(dados.preco)})`, "produtos", novo?.id);
     }
     cancelarEdicaoProduto();
     e.target.reset();
@@ -324,7 +343,8 @@ async function carregarClientes() {
     b.addEventListener("click", async () => {
       if (!confirm("Remover este cliente?")) return;
       const { error } = await db.from("clientes").delete().eq("id", b.dataset.delC);
-      if (error) alert("Erro: " + amigavel(error));
+      if (error) { alert("Erro: " + amigavel(error)); return; }
+      await registrarLog("removeu", `cliente "${(clientes||[]).find((c) => c.id === b.dataset.delC)?.nome || "desconhecido"}"`, "clientes", b.dataset.delC);
       carregarClientes();
     })
   );
@@ -344,9 +364,11 @@ $("#form-cliente").addEventListener("submit", async (e) => {
     if (editandoClienteId) {
       const { error } = await db.from("clientes").update(dados).eq("id", editandoClienteId);
       if (error) throw new Error(amigavel(error));
+      await registrarLog("editou", `cliente "${dados.nome}"`, "clientes", editandoClienteId);
     } else {
-      const { error } = await db.from("clientes").insert(dados);
+      const { data: novo, error } = await db.from("clientes").insert(dados).select("id").single();
       if (error) throw new Error(amigavel(error));
+      await registrarLog("adicionou", `cliente "${dados.nome}"`, "clientes", novo?.id);
     }
     cancelarEdicaoCliente();
     e.target.reset();
@@ -435,6 +457,7 @@ $("#form-venda").addEventListener("submit", async (e) => {
       }
       throw new Error(amigavel(e2));
     }
+    await registrarLog("registrou", `venda de ${moeda(total)}${header.cliente_nome ? " (" + header.cliente_nome + ")" : ""}${header.pagamento ? " · " + header.pagamento : ""}`, "vendas", venda.id);
     msg.textContent = "Venda registrada: " + moeda(total) +
       (header.cliente_nome ? " · " + header.cliente_nome : "") +
       (header.pagamento ? " · " + header.pagamento : "");
@@ -474,10 +497,37 @@ async function carregarVendas() {
           <span class="nome">${itens}</span>
           <span class="det">${dataHora}${extra ? " · " + esc(extra) : ""}</span>
         </div>
-        <strong>${moeda(v.total)}</strong>
+        <span class="acoes-item">
+          <strong>${moeda(v.total)}</strong>
+          <button class="btn btn-mini" data-del-v="${v.id}">Remover</button>
+        </span>
       </li>`;
       }).join("")
     : '<li class="empty">Nenhuma venda registrada.</li>';
+  ul.querySelectorAll("[data-del-v]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const v = Object.fromEntries(vendas.map((x) => [x.id, x]))[b.dataset.delV];
+      if (!confirm("Remover esta venda? O estoque dos itens será reposto.")) return;
+      try {
+        const { data: itensVenda } = await db.from("venda_itens")
+          .select("produto_id, quantidade").eq("venda_id", b.dataset.delV);
+        const { error } = await db.from("vendas").delete().eq("id", b.dataset.delV);
+        if (error) throw new Error(amigavel(error));
+        for (const i of itensVenda || []) {
+          if (!i.produto_id) continue;
+          const p = produtos.find((x) => x.id === i.produto_id);
+          if (p) {
+            const r = await db.from("produtos")
+              .update({ quantidade: p.quantidade + i.quantidade }).eq("id", p.id);
+            if (r.error) alert("Venda removida, mas o estoque de um item não foi reposto.");
+          }
+        }
+        await registrarLog("removeu", `venda de ${moeda(v.total)} — estoque reposto`, "vendas", b.dataset.delV);
+        carregarEstoque();
+        carregarVendas();
+      } catch (e) { alert("Erro: " + e.message); }
+    })
+  );
 }
 
 // =====================================================
@@ -539,6 +589,118 @@ async function carregarLucro() {
 $("#lucro-periodo").addEventListener("change", carregarLucro);
 
 // =====================================================
+// LOG DE ALTERAÇÕES
+// =====================================================
+async function carregarLogs() {
+  const { data, error } = await db.from("logs")
+    .select("id, acao, tabela, descricao, usuario, created_at")
+    .order("id", { ascending: false }).limit(150);
+  const logs = (!error && data) ? data : [];
+  const ul = document.querySelector("#lista-logs");
+  if (!ul) return;
+  ul.innerHTML = logs.length
+    ? logs.map((l) => {
+        const d = new Date(l.created_at);
+        const dataHora = d.toLocaleDateString("pt-BR") + " " +
+          d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        return `
+      <li class="item">
+        <div class="info">
+          <span class="nome">${esc(l.acao)} <em class="cat-item">(${esc(l.tabela || "geral")})</em></span>
+          <span class="det">${dataHora} · ${esc(l.usuario)}${l.descricao ? "<br>" + esc(l.descricao) : ""}</span>
+        </div>
+      </li>`;
+      }).join("")
+    : '<li class="empty">Nenhuma alteração registrada ainda.</li>';
+}
+
+// ---------- BANNERS (carrossel do topo do catálogo) ----------
+async function carregarBanners() {
+  const { data, error } = await db.from("banners")
+    .select("id, url, legenda, ordem, ativo").order("ordem");
+  const lista = (!error && data) ? data : [];
+  const ul = document.querySelector("#lista-banners");
+  if (!ul) return;
+  ul.innerHTML = lista.length
+    ? lista.map((b, i) => `
+      <li class="item" style="display:flex;align-items:center;gap:12px">
+        <img src="${esc(b.url)}" alt="" style="width:110px;height:62px;object-fit:cover;border-radius:10px;border:1px solid #e3ecf3" />
+        <div class="info" style="flex:1;min-width:150px">
+          <span class="nome">${i + 1}. ${b.ativo ? "Ativo" : "Pausado"} — ${esc(b.legenda || "(sem legenda)")}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="btn-mini" data-b-sub="${b.id}" ${i === 0 ? "disabled" : ""} title="Subir">▲</button>
+          <button type="button" class="btn-mini" data-b-baixo="${b.id}" ${i === lista.length - 1 ? "disabled" : ""} title="Descer">▼</button>
+          <button type="button" class="btn-mini" data-b-toggle="${b.id}" title="${b.ativo ? "Pausar (some do site)" : "Ativar (volta ao site)"}">${b.ativo ? "⏸" : "▶"}</button>
+          <button type="button" class="btn-mini" data-b-del="${b.id}" data-b-url="${esc(b.url)}" title="Apagar">🗑</button>
+        </div>
+      </li>`).join("")
+    : '<li class="empty">Nenhum banner cadastrado. Suba uma foto nova acima — ou rode o ATUALIZACAO_v7.sql no Supabase para trazer os 5 originais.</li>';
+  ul.querySelectorAll("[data-b-sub]").forEach((x) => x.addEventListener("click", () => moverBanner(+x.dataset.bSub, -1)));
+  ul.querySelectorAll("[data-b-baixo]").forEach((x) => x.addEventListener("click", () => moverBanner(+x.dataset.bBaixo, 1)));
+  ul.querySelectorAll("[data-b-toggle]").forEach((x) => x.addEventListener("click", () => alternarBanner(+x.dataset.bToggle)));
+  ul.querySelectorAll("[data-b-del]").forEach((x) => x.addEventListener("click", () => apagarBanner(+x.dataset.bDel, x.dataset.bUrl)));
+}
+
+async function moverBanner(id, delta) {
+  const { data } = await db.from("banners").select("id, ordem").order("ordem");
+  const lista = data || [];
+  const i = lista.findIndex((b) => b.id === id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= lista.length) return;
+  await db.from("banners").update({ ordem: lista[j].ordem }).eq("id", lista[i].id);
+  await db.from("banners").update({ ordem: lista[i].ordem }).eq("id", lista[j].id);
+  registrarLog("mmoveu banner", `trocou as posições ${i + 1} e ${j + 1}`);
+  carregarBanners();
+}
+
+async function alternarBanner(id) {
+  const { data } = await db.from("banners").select("ativo").eq("id", id).maybeSingle();
+  if (!data) return;
+  await db.from("banners").update({ ativo: !data.ativo }).eq("id", id);
+  registrarLog("alterou banners", (data.ativo ? "pausou" : "ativou") + " um banner do carrossel");
+  carregarBanners();
+}
+
+async function apagarBanner(id, url) {
+  if (!confirm("Apagar este banner? Ele sai do carrossel do catálogo.")) return;
+  await db.from("banners").delete().eq("id", id);
+  const m = (url || "").match(/fotos\/(.+)$/);
+  if (m) db.storage.from("fotos").remove([m[1]]).catch(() => {});
+  registrarLog("removeu banner", "apagou um banner do carrossel");
+  carregarBanners();
+}
+
+$("#btn-subir-banner").addEventListener("click", async () => {
+  const file = $("#b-foto").files[0];
+  if (!file) { alert("Escolha a foto do banner."); return; }
+  if (file.size > 3 * 1024 * 1024) { alert("Foto muito grande (máx. 3 MB)."); return; }
+  const btn = $("#btn-subir-banner");
+  btn.textContent = "Enviando…";
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const caminho = "banners/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) +
+    "." + (/[a-z0-9]{2,4}$/.test(ext) ? ext : "jpg");
+  const { error } = await db.storage.from("fotos").upload(caminho, file);
+  if (error) {
+    alert("Falha ao enviar a foto: " + error.message);
+    btn.textContent = "+ Adicionar banner";
+    return;
+  }
+  const url = db.storage.from("fotos").getPublicUrl(caminho).data.publicUrl;
+  const { data } = await db.from("banners").select("ordem").order("ordem", { ascending: false }).limit(1);
+  const ordem = (data && data[0] ? data[0].ordem : 0) + 1;
+  const { error: e2 } = await db.from("banners").insert({
+    url, legenda: $("#b-legenda").value.trim() || null, ordem
+  });
+  if (e2) alert("A foto subiu, mas falhou ao cadastrar no site: " + e2.message);
+  registrarLog("adicionou banner", "subiu um banner novo para o carrossel");
+  $("#b-foto").value = "";
+  $("#b-legenda").value = "";
+  btn.textContent = "+ Adicionar banner";
+  carregarBanners();
+});
+
+// =====================================================
 // iniciar
 // =====================================================
 let clientes = [];
@@ -547,7 +709,13 @@ function carregarTudo() {
   carregarClientes();
   carregarVendas();
   renderizarCarrinho();
+  carregarLogs();
 }
+
+// barra do painel recolhe ao rolar
+window.addEventListener("scroll", () => {
+  document.querySelector("header")?.classList.toggle("rolando", window.scrollY > 40);
+}, { passive: true });
 db.auth.getSession().then(({ data }) => {
   if (data.session) carregarTudo();
 });
