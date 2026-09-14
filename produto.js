@@ -36,6 +36,15 @@ function fotosDe(produto) {
     a.addEventListener("click", () => links.classList.remove("aberto")));
 })();
 
+// ---------- navbar recolhe ao rolar ----------
+(function navbarRolagem() {
+  const nav = document.querySelector(".navbar");
+  if (!nav) return;
+  const checar = () => nav.classList.toggle("rolando", window.scrollY > 40);
+  window.addEventListener("scroll", checar, { passive: true });
+  checar();
+})();
+
 // ---------- carrossel ----------
 let carrossel = null;
 function iniciarCarrossel() {
