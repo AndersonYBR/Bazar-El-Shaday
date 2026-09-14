@@ -74,7 +74,7 @@ body{
 }
 
 /* ---------- banners (largura total da página) ---------- */
-.banner-wrap{position:relative;max-width:100%;margin:0;padding:0;z-index:1}
+.banner-wrap{position:relative;max-width:100%;margin:10px 0 0;padding:0;z-index:1}
 .banner-slides{
   position:relative;overflow:hidden;border-radius:0;
   box-shadow:0 6px 18px rgba(0,0,0,.12);background:#fff;
