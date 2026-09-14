@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600;700&family=Dancing+Script:wght@600;700&family=Pacifico&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
   <!-- ============ TELA DE LOGIN ============ -->
   <section id="tela-login" class="tela">
     <div class="caixa">
-      <img src="logo-bazar-val.png" alt="Bazar da Val" class="logo-login" />
+      <img src="logodaval.jpg" alt="Bazar da Val" class="logo-login" />
       <h1>Bazar da Val</h1>
       <p id="msg-login" class="msg"></p>
       <form id="form-login">
@@ -29,7 +29,7 @@
   <!-- ============ APP (visível após login) ============ -->
   <section id="tela-app" class="tela oculta">
     <header>
-      <h1><img src="logo-bazar-val.png" alt="" class="logo-admin" />Bazar da Val</h1>
+      <h1><img src="logodaval.jpg" alt="" class="logo-admin" /><span class="nome-admin">Bazar da Val<br><em class="slogan-admin"><span class="t1">Do seu</span> <span class="t2">tamanho,</span> <span class="t3">do seu</span> <span class="t4">jeito,</span> <span class="t5">do seu</span> <span class="t6">preço</span></em></span></h1>
       <div class="acoes-topo">
         <a href="catalogo.html" class="link-catalogo" target="_blank">📖 Catálogo</a>
         <button id="btn-sair" class="btn btn-perigo">Sair</button>
@@ -40,7 +40,9 @@
       <button class="aba ativa" data-aba="estoque">Estoque</button>
       <button class="aba" data-aba="vendas">Vendas</button>
       <button class="aba" data-aba="clientes">Clientes</button>
+      <button class="aba" data-aba="banners">Banners</button>
       <button class="aba" data-aba="lucro">Lucro</button>
+      <button class="aba" data-aba="logs">Logs</button>
     </nav>
 
     <!-- ============ ESTOQUE ============ -->
@@ -147,6 +149,18 @@
     </main>
 
     <!-- ============ LUCRO ============ -->
+    <!-- ============ BANNERS ============ -->
+    <main id="aba-banners" class="conteudo oculta">
+      <h2>Banners do topo</h2>
+      <p class="dica-campo">Os banners do carrossel do catálogo, na ordem que aparecem. Suba uma foto nova (formato paisagem, ~1280×720), organize com ▲▼, pause ou apague.</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0">
+        <input type="file" id="b-foto" accept="image/*" />
+        <input type="text" id="b-legenda" placeholder="Legenda (opcional)" />
+        <button type="button" id="btn-subir-banner" class="btn-primario">+ Adicionar banner</button>
+      </div>
+      <ul id="lista-banners" class="lista"></ul>
+    </main>
+
     <main id="aba-lucro" class="conteudo oculta">
       <h2>Lucro</h2>
       <div class="linha-campos">
@@ -160,6 +174,12 @@
       <div id="lucro-cards" class="lucro-cards"></div>
       <h3>Lucro por produto</h3>
       <div id="lucro-grafico" class="lucro-grafico"></div>
+    </main>
+    <!-- ============ LOGS ============ -->
+    <main id="aba-logs" class="conteudo oculta">
+      <h2>Log de alterações</h2>
+      <p class="dica-campo">Tudo que foi feito no painel: quem fez, o quê e quando (mais recentes primeiro).</p>
+      <ul id="lista-logs" class="lista"></ul>
     </main>
   </section>
 
