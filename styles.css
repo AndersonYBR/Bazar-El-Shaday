@@ -34,14 +34,19 @@ body{
 }
 
 /* ---------- HEADER (barra flutuante de vidro, igual navbar do catálogo) ---------- */
+/* espaçor no lugar da barra fixa (mantém o layout, sem movimento ao rolar) */
+.header-spacer{height:130px}
+@media (min-width:721px){.header-spacer{height:202px}}
 header{
-  position:sticky;top:8px;z-index:50;
+  position:fixed;top:8px;left:50%;transform:translateX(-50%);
+  width:min(728px,calc(100vw - 32px));z-index:50;
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   background:rgba(255,248,193,.65);
   -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   box-shadow:0 4px 14px rgba(20,83,125,.05);
   border:1px solid rgba(27,127,191,.05);
-  border-radius:16px;padding:8px 12px;margin-bottom:16px;
+  border-radius:16px;padding:8px 12px;
+  transform-origin:center top;transition:transform .3s ease,box-shadow .3s ease,background .3s ease;
 }
 header h1{
   font-family:"Playfair Display",Georgia,serif;font-size:18px;margin:0;
@@ -177,9 +182,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--primaria);border
 .det-barra{font-size:12px;color:var(--muted);margin:2px 0 0}
 
 /* ---------- barra do painel recolhe ao rolar ---------- */
-header{transition:transform .3s ease,box-shadow .3s ease,background .3s ease;transform-origin:center top}
 .logo-admin{flex:none}
-header.rolando{background:rgba(255,251,247,.92);box-shadow:0 4px 16px rgba(20,83,125,.10);transform:scale(.78)}
+header.rolando{background:rgba(255,251,247,.92);box-shadow:0 4px 16px rgba(20,83,125,.10);transform:translateX(-50%) scale(.78)}
 
 /* ---------- jargão no painel ---------- */
 .nome-admin{font-size:17px;line-height:1.15}
